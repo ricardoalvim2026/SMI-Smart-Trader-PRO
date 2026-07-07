@@ -1,0 +1,2 @@
+//@version=6
+indicator("SMI Smart Trader PRO", overlay=true)
