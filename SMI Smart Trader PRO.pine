@@ -1,1 +1,97 @@
+//@version=6
+indicator("SMI Smart Trader V3", shorttitle="SMIV3", overlay=true)
 
+//======================================================
+// INPUTS
+//======================================================
+
+emaFast = input.int(20, "EMA Curta", minval=1)
+emaSlow = input.int(200, "EMA Longa", minval=2)
+
+pivotLeft = input.int(3, "Pivot Left", minval=1)
+pivotRight = input.int(3, "Pivot Right", minval=1)
+
+//======================================================
+// TREND
+//======================================================
+
+ema20 = ta.ema(close, emaFast)
+ema200 = ta.ema(close, emaSlow)
+
+plot(ema20, title="EMA20", color=color.aqua, linewidth=2)
+plot(ema200, title="EMA200", color=color.orange, linewidth=2)
+
+bullTrend = ema20 > ema200 and ema20 > ema20[1]
+bearTrend = ema20 < ema200 and ema20 < ema20[1]
+
+//======================================================
+// MARKET CONTEXT
+//======================================================
+
+highest20 = ta.highest(high, 20)
+lowest20 = ta.lowest(low, 20)
+
+bullContext =
+    bullTrend and
+    close > ema20 and
+    ema20 > ema20[5]
+
+bearContext =
+    bearTrend and
+    close < ema20 and
+    ema20 < ema20[5]
+
+bullBreakout = bullContext and close >= highest20[1]
+
+bearBreakout = bearContext and close <= lowest20[1]
+
+plotshape(bullContext, title="Bull Context", style=shape.circle, location=location.belowbar, color=color.lime, size=size.tiny)
+
+plotshape(bearContext, title="Bear Context", style=shape.circle, location=location.abovebar, color=color.red, size=size.tiny)
+
+//======================================================
+// MODULE 02 - DISPLACEMENT
+//======================================================
+
+atr = ta.atr(14)
+
+candleRange = high - low
+candleBody = math.abs(close - open)
+
+bodyPercent = candleRange > 0 ? candleBody / candleRange : 0.0
+
+bullDisplacement = bullContext and not na(lastSwingHigh) and close > lastSwingHigh and candleRange > atr and bodyPercent >= 0.65 and close > open
+
+bearDisplacement = bearContext and not na(lastSwingLow) and close < lastSwingLow and candleRange > atr and bodyPercent >= 0.65 and close < open
+
+plotshape(bullDisplacement, title="Bull Displacement", style=shape.arrowup, location=location.belowbar, color=color.green, size=size.small)
+
+plotshape(bearDisplacement, title="Bear Displacement", style=shape.arrowdown, location=location.abovebar, color=color.red, size=size.small)
+
+//======================================================
+// MODULE 03 - RETEST
+//======================================================
+
+bullRetest = bullDisplacement[1] and low <= ema20 and close > ema20
+
+bearRetest = bearDisplacement[1] and high >= ema20 and close < ema20
+
+plotshape(bullRetest, title="Bull Retest", style=shape.square, location=location.belowbar, color=color.blue, size=size.small)
+
+plotshape(bearRetest, title="Bear Retest", style=shape.square, location=location.abovebar, color=color.orange, size=size.small)
+
+//======================================================
+// MODULE 04 - ENTRY
+//======================================================
+
+bullEntry = bullRetest and close > high[1]
+
+bearEntry = bearRetest and close < low[1]
+
+plotshape(bullEntry, title="BUY", style=shape.labelup, location=location.belowbar, color=color.lime, text="BUY", textcolor=color.black)
+
+plotshape(bearEntry, title="SELL", style=shape.labeldown, location=location.abovebar, color=color.red, text="SELL", textcolor=color.white)
+
+alertcondition(bullEntry, title="BUY", message="SMI V3 BUY")
+
+alertcondition(bearEntry, title="SELL", message="SMI V3 SELL")
